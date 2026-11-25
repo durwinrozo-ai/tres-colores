@@ -5,7 +5,7 @@ Convierte frases en las mismas teclas de deploy_sonic_vision.py:
 
     "zuu, busca el rojo"      -> 1        "zuu, ve al verde"  -> 2      "zuu, azul" -> 3
     "zuu, fucsia"             -> 5        "zuu, violeta"      -> 6      "zuu, naranja" -> 7
-    "zuu, inspecciona"        -> s        "zuu, quieto"       -> 0
+    "zuu, inspecciona"        -> s        "zuu, quieto"       -> 0      "zuu, retrocede" -> r (3 s hacia atras)
     "para" / "alto" / "detente" -> ESPACIO (PARAR; NO necesita la palabra de activacion)
 
 Audio del G1: UDP multicast 239.168.123.161:5555, PCM 16 kHz mono 16 bit (mismo formato que usa
@@ -40,6 +40,7 @@ RATE = 16000
 STOP_WORDS = {"para", "parar", "alto", "detente", "detener", "detenerse", "frena", "frenar",
               "stop", "espera", "pausa", "basta"}
 QUIET_WORDS = {"quieto", "quieta", "cero"}
+BACK_WORDS = {"retrocede", "retroceder", "reversa", "atras"}  # "zuu, retrocede" -> r (3 s hacia atras)
 SCAN_WORDS = {"inspecciona", "inspeccionar", "inspeccion", "gira", "girar", "explora", "explorar", "busca", "buscar"}
 COLOR_WORDS = {"rojo": "1", "roja": "1", "verde": "2", "azul": "3",
                "fucsia": "5", "fuxia": "5", "fuchsia": "5", "magenta": "5",
@@ -56,7 +57,7 @@ def normalizar(texto):
 
 
 def interpretar(texto, palabra_activacion="zuu"):
-    """Devuelve (tecla, motivo). tecla es ' ', '0', 's', '1', '2', '3', '5', '6', '7' o None.
+    """Devuelve (tecla, motivo). tecla es ' ', '0', 's', 'r', '1', '2', '3', '5', '6', '7' o None.
     PARAR siempre funciona. El resto exige la palabra de activacion (si se configuro)."""
     w = normalizar(texto)
     if not w:
@@ -75,6 +76,8 @@ def interpretar(texto, palabra_activacion="zuu"):
         return colores.pop(), "color"
     if ws & QUIET_WORDS:
         return "0", "quieto"
+    if ws & BACK_WORDS:
+        return "r", "retroceder"
     if ws & SCAN_WORDS:
         return "s", "inspeccionar"
     return None, "comando no reconocido"

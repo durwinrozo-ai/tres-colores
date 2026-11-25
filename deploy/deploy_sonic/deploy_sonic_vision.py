@@ -20,6 +20,7 @@ Teclas (con foco en la ventana "Lo que ve el robot"; no distingue mayusculas):
     5  fucsia      6  violeta      7  naranja   (colores nuevos; --colores clasicos|nuevos|todos elige cuales estan activos)
     ESPACIO o x  PARAR (IDLE inmediato)        q  salir (deja al robot quieto)
     w  prueba de marcha: camina recto 3 s sin usar la vision (aisla el problema)
+    r  retroceder: camina hacia atras 3 s (sin vision; mira hacia adelante y recula, tope 0.2 m/s)
     Voz (--voz g1|pc): "zuu, busca el rojo/verde/azul/fucsia/violeta/naranja", "zuu, inspecciona", "zuu, quieto"; "para"/"alto" = PARAR
     Punto: desde los lentes Pico (gatillo derecho sobre el piso) o POST /punto?x=&y= del panel: camina a ese punto del video
     b  reenviar el comando `start` (en --real: pulsar dos veces en 3 s)
@@ -860,7 +861,8 @@ def main():
     hz = args.rate
     last_b = 0.0
     prev_label = ""
-    walk_until = 0.0  # tecla w: prueba de marcha recta sin vision
+    walk_until = 0.0  # tecla w / r: prueba de marcha (recta o hacia atras) sin vision
+    walk_dir = 1.0    # +1 avanza (w), -1 retrocede (r)
     cajas, tick = {}, 0  # cajas detectadas (para el puntero de los lentes Pico)
     tracker = PointTracker()  # destino sobre el piso elegido en el video (TARGET_POINT)
     point_t0, last_ft = 0.0, -1.0
@@ -918,9 +920,12 @@ def main():
                       "Si no avanzo nada, el objeto ya estaba mas cerca que stop-y: sube --stop-y o alejalo.")
             prev_label = label
 
-            if t0 < walk_until:  # prueba de marcha: SLOW_WALK recto, ignora la vision
+            if t0 < walk_until:  # prueba de marcha: SLOW_WALK recto (o hacia atras), ignora la vision
                 f0 = (math.cos(nav.theta), math.sin(nav.theta), 0.0)
-                mode, mv, fc, sp, label = MODE_SLOW_WALK, f0, f0, float(np.clip(args.walk_speed, 0.1, 0.8)), "PRUEBA-MARCHA"
+                v_walk = args.walk_speed if walk_dir > 0 else min(args.walk_speed, 0.2)  # atras: mas despacio
+                mv_walk = tuple(walk_dir * c for c in f0)  # movimiento opuesto al rumbo: el robot recula sin girar
+                mode, mv, fc, sp, label = (MODE_SLOW_WALK, mv_walk, f0, float(np.clip(v_walk, 0.1, 0.8)),
+                                           "PRUEBA-MARCHA" if walk_dir > 0 else "PRUEBA-RETROCESO")
 
             if args.dry_run:  # prueba sin mover: solo IDLE, igual se ve toda la logica en pantalla
                 pub.send(build_planner(MODE_IDLE, (0, 0, 0), (math.cos(nav.theta), math.sin(nav.theta), 0), -1.0))
@@ -1007,8 +1012,16 @@ def main():
                 if args.dry_run:
                     print("[Prueba] --dry-run activo: el robot NO se mueve. Reinicia sin --dry-run.")
                 else:
+                    walk_dir = 1.0
                     walk_until = time.time() + 3.0
                     print(f"[Prueba] SLOW_WALK recto 3 s a {args.walk_speed:.2f} m/s (ESPACIO para cortar)")
+            elif k == "r":
+                if args.dry_run:
+                    print("[Prueba] --dry-run activo: el robot NO se mueve. Reinicia sin --dry-run.")
+                else:
+                    walk_dir = -1.0
+                    walk_until = time.time() + 3.0
+                    print(f"[Prueba] RETROCEDER 3 s a {min(args.walk_speed, 0.2):.2f} m/s (ESPACIO para cortar)")
             elif k == "q":
                 break
 

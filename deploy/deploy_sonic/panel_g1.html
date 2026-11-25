@@ -80,6 +80,7 @@ button.on{background:var(--acc);border-color:var(--acc);color:#fff}
       <button class="mv" style="border-color:#f08a1c" onclick="key('7')">🟧 Naranja<kbd>7</kbd></button>
       <button onclick="key('0')">⏸ Quieto<kbd>0</kbd></button>
       <button class="mv" onclick="key('w')">🚶 Prueba marcha 3 s<kbd>W</kbd></button>
+      <button class="mv" onclick="key('r')">↩️ Retroceder 3 s<kbd>R</kbd></button>
       <button onclick="key('b')">↻ Reenviar start<kbd>B</kbd></button>
       <button class="stop" onclick="key(' ')">PARAR<kbd style="color:#fff">ESPACIO</kbd></button>
     </div>
@@ -222,7 +223,7 @@ function render(){
  if(want!==camSrc){camSrc=want;$('cam').src=want||'';$('cam').style.display=want?'block':'none'}
  $('camNone').style.display=want?'none':'grid';
  // chips
- if(v){const f=x=>x==null?'—':x;$('chips').innerHTML=`<span class="chip">Objetivo <b>${v.target}</b></span><span class="chip">Estado <b>${v.label}</b></span><span class="chip">y_max <b>${f(v.y_max)}</b> / parada ${v.stop_y}</span><span class="chip">error <b>${f(v.err)}</b></span><span class="chip">vel <b>${v.speed}</b> m/s</span><span class="chip">${v.hz} Hz</span><span class="chip">${v.real?'REAL':'SIM'}${v.dry_run?' · DRY-RUN':''}${v.walking_test?' · PRUEBA MARCHA':''}</span>`;
+ if(v){const f=x=>x==null?'—':x;$('chips').innerHTML=`<span class="chip">Objetivo <b>${v.target}</b></span><span class="chip">Estado <b>${v.label}</b></span><span class="chip">y_max <b>${f(v.y_max)}</b> / parada ${v.stop_y}</span><span class="chip">error <b>${f(v.err)}</b></span><span class="chip">vel <b>${v.speed}</b> m/s</span><span class="chip">${v.hz} Hz</span><span class="chip">${v.real?'REAL':'SIM'}${v.dry_run?' · DRY-RUN':''}${v.walking_test?' · '+(v.label==='PRUEBA-RETROCESO'?'RETROCEDIENDO':'PRUEBA MARCHA'):''}</span>`;
   $('vozOn').checked=v.voz_enabled}else $('chips').innerHTML='<span class="chip">Programa de cajas apagado</span>';
  if(S.cam.depth_center_m!=null)$('chips').innerHTML+=`<span class="chip">Profundidad al centro <b>${S.cam.depth_center_m} m</b></span>`;
  $('vozOn').disabled=!v;
@@ -260,7 +261,7 @@ function render(){
 }
 document.addEventListener('keydown',e=>{if(/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;const k=e.key.toLowerCase();
  if(k===' '){e.preventDefault();key(' ');return}
- if('s0123567wb'.includes(k)&&k.length===1){const mv='s123567w'.includes(k);if(mv&&!($('okSafe').checked||!modoReal()))return;key(k)}});
+ if('s0123567wrb'.includes(k)&&k.length===1){const mv='s123567wr'.includes(k);if(mv&&!($('okSafe').checked||!modoReal()))return;key(k)}});
 async function poll(){
  try{const r=await fetch(`/api/state?log=${logName}&since=${logSince}`);S=await r.json();
   if(!cfgBuilt)buildForm();

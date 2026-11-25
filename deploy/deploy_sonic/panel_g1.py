@@ -8,7 +8,7 @@ Corre en TU PC (el que tiene .venv_teleop) y se abre en el navegador:
 
 Reemplaza abrir 5 terminales a mano: lanza/detiene cada proceso (camara del robot por ssh, emisor
 de microfono, deploy SONIC, programa de vision, MuJoCo), muestra lo que ve el robot, tiene los botones
-de las teclas (s, 0, 1/2/3, 5/6/7, w, b, ESPACIO), el interruptor de voz y la parada de emergencia.
+de las teclas (s, 0, 1/2/3, 5/6/7, w, r, b, ESPACIO), el interruptor de voz y la parada de emergencia.
 Solo escucha en 127.0.0.1. La contrasena del robot se guarda solo en memoria.
 """
 import argparse

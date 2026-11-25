@@ -20,7 +20,7 @@ Teclas (con foco en la ventana "Lo que ve el robot"; no distingue mayusculas):
     5  fucsia      6  violeta      7  naranja   (colores nuevos; --colores clasicos|nuevos|todos elige cuales estan activos)
     ESPACIO o x  PARAR (IDLE inmediato)        q  salir (deja al robot quieto)
     w  prueba de marcha: camina recto 3 s sin usar la vision (aisla el problema)
-    r  retroceder: camina hacia atras 3 s (sin vision; mira hacia adelante y recula, tope 0.2 m/s)
+    r  retroceder: camina hacia atras 3 s (sin vision; mira hacia adelante y recula a --back-speed)
     Voz (--voz g1|pc): "zuu, busca el rojo/verde/azul/fucsia/violeta/naranja", "zuu, inspecciona", "zuu, quieto"; "para"/"alto" = PARAR
     Punto: desde los lentes Pico (gatillo derecho sobre el piso) o POST /punto?x=&y= del panel: camina a ese punto del video
     b  reenviar el comando `start` (en --real: pulsar dos veces en 3 s)
@@ -742,6 +742,8 @@ def main():
     p.add_argument("--scan-ang-vel", type=float, default=None, help="rad/s al inspeccionar (sim 0.5 / real 0.3)")
     p.add_argument("--walk-speed", type=float, default=None, help="m/s (SLOW_WALK 0.1-0.8; sim 0.5 / real 0.2)")
     p.add_argument("--slow-speed", type=float, default=None, help="m/s al acercarse (sim 0.25 / real 0.15)")
+    p.add_argument("--back-speed", type=float, default=None,
+                   help="m/s al retroceder con la tecla R (SLOW_WALK 0.1-0.8; defecto = --walk-speed; en --real tope --max-walk)")
     p.add_argument("--slow-y", type=float, default=0.80, help="y_max a partir del cual frena")
     p.add_argument("--max-walk", type=float, default=REAL_MAX_WALK,
                    help=f"tope de --walk-speed en --real (defecto {REAL_MAX_WALK}; SLOW_WALK admite hasta 0.8). Subir de a poco")
@@ -771,6 +773,7 @@ def main():
     args.stop_y = args.stop_y if stop_y_given else 0.93
     args.scan_ang_vel = args.scan_ang_vel if args.scan_ang_vel is not None else (0.3 if real else 0.5)
     args.walk_speed = args.walk_speed if args.walk_speed is not None else (0.2 if real else 0.5)
+    args.back_speed = args.back_speed if args.back_speed is not None else args.walk_speed
     args.slow_speed = args.slow_speed if args.slow_speed is not None else (0.15 if real else 0.25)
     if real:
         args.max_walk = float(np.clip(args.max_walk, 0.1, 0.8))
@@ -780,6 +783,7 @@ def main():
         if args.walk_speed > args.max_walk:
             print(f"[Seguridad] --walk-speed limitado a {args.max_walk} m/s")
             args.walk_speed = args.max_walk
+        args.back_speed = min(args.back_speed, args.max_walk)
         args.slow_speed = min(args.slow_speed, args.walk_speed)
 
     hsv_rules = load_hsv_rules(args.hsv_file)
@@ -922,7 +926,7 @@ def main():
 
             if t0 < walk_until:  # prueba de marcha: SLOW_WALK recto (o hacia atras), ignora la vision
                 f0 = (math.cos(nav.theta), math.sin(nav.theta), 0.0)
-                v_walk = args.walk_speed if walk_dir > 0 else min(args.walk_speed, 0.2)  # atras: mas despacio
+                v_walk = args.walk_speed if walk_dir > 0 else args.back_speed  # atras: --back-speed
                 mv_walk = tuple(walk_dir * c for c in f0)  # movimiento opuesto al rumbo: el robot recula sin girar
                 mode, mv, fc, sp, label = (MODE_SLOW_WALK, mv_walk, f0, float(np.clip(v_walk, 0.1, 0.8)),
                                            "PRUEBA-MARCHA" if walk_dir > 0 else "PRUEBA-RETROCESO")
@@ -1021,7 +1025,7 @@ def main():
                 else:
                     walk_dir = -1.0
                     walk_until = time.time() + 3.0
-                    print(f"[Prueba] RETROCEDER 3 s a {min(args.walk_speed, 0.2):.2f} m/s (ESPACIO para cortar)")
+                    print(f"[Prueba] RETROCEDER 3 s a {float(np.clip(args.back_speed, 0.1, 0.8)):.2f} m/s (ESPACIO para cortar)")
             elif k == "q":
                 break
 

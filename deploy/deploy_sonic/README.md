@@ -353,7 +353,7 @@ La tecla 4 sigue reservada para el destino "PUNTO" (ir a un punto del piso).
 ## Retroceder (tecla R)
 
 Igual que **W** avanza 3 s en linea recta, **R** hace retroceder al robot 3 s: SLOW_WALK con el movimiento opuesto al rumbo
-(el robot sigue mirando al frente y recula, sin girar), a `min(--walk-speed, 0.2)` m/s. Se corta con ESPACIO.
+(el robot sigue mirando al frente y recula, sin girar), a `--back-speed` m/s (panel: Ajustes -> "Velocidad al retroceder", defecto 0.5; en `--real` con tope `--max-walk` 0.3). Se corta con ESPACIO.
 Boton **Retroceder 3 s** en el panel (pide la casilla de seguridad, como W) y voz: "zuu, retrocede" / "zuu, atras".
 Sin vision (la camara mira al frente): comprobar que no haya nada detras. Sin boton en los mandos de las gafas Pico.
 Con `--dry-run` no mueve al robot. Probado solo la logica (teclas y voz); falta verlo en MuJoCo y en el robot.

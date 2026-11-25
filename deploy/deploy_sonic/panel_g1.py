@@ -8,7 +8,7 @@ Corre en TU PC (el que tiene .venv_teleop) y se abre en el navegador:
 
 Reemplaza abrir 5 terminales a mano: lanza/detiene cada proceso (camara del robot por ssh, emisor
 de microfono, deploy SONIC, programa de vision, MuJoCo), muestra lo que ve el robot, tiene los botones
-de las teclas (s, 0, 1/2/3, w, b, ESPACIO), el interruptor de voz y la parada de emergencia.
+de las teclas (s, 0, 1/2/3, 5/6/7, w, b, ESPACIO), el interruptor de voz y la parada de emergencia.
 Solo escucha en 127.0.0.1. La contrasena del robot se guarda solo en memoria.
 """
 import argparse
@@ -43,7 +43,7 @@ DEFAULT_CFG = {
     "mic_nombre": "auto", "udp_puerto": 5600,
     "stop_y": 0.93, "walk_speed": 0.3, "max_walk": 0.3, "slow_y": 0.80, "slow_speed": 0.15, "scan_ang_vel": 0.3,
     "voz_activacion": "zuu", "voz_umbral": 300, "voz_idioma": "es-CO",
-    "usar_voz": True, "usar_mic": True, "dry_run": False,
+    "usar_voz": True, "usar_mic": True, "dry_run": False, "colores": "todos",
     "vision_port": 8765, "modo": "real",
     "usar_pico": False, "pico_pc_ip": "192.168.123.104", "pico_modo": "ego", "pico_seguro": "habilitar", "pico_env": "tv",
     "pico_puntero": "rayo", "pico_plano": "mundo", "pico_escala": 1.0, "pico_cal_auto": 0, "pico_yaw": 0.0, "pico_pitch": 0.0,
@@ -290,6 +290,8 @@ def start_proc(name, real=None):
         if real:
             a += ["--source g1", "--real", f"--hsv-file {sh_q(os.path.expanduser(c['hsv_file']))}",
                   f"--scan-ang-vel {c['scan_ang_vel']}"]
+        if c.get("colores") in ("clasicos", "nuevos", "todos"):
+            a.append(f"--colores {c['colores']}")
         if c.get("dry_run"):
             a.append("--dry-run")
         if c.get("usar_voz"):

@@ -25,9 +25,10 @@ MANDOS (controladores Pico). Mandan las MISMAS teclas que el panel (POST /api/ke
     Gatillo izquierdo      PARAR       (ESPACIO, siempre funciona)
     Ambos clics a la vez   CALIBRAR el puntero (apuntando a la cruz del centro del video)
     Grip (lateral)         SEGURO: ver --seguro
+    Fucsia / violeta / naranja (5, 6, 7): no tienen boton; se eligen APUNTANDO a la caja con el gatillo derecho
 
 PUNTERO (--puntero rayo|joystick|off). En las gafas se ve el video del robot con un recuadro fino alrededor
-de cada caja detectada (rojo/verde/azul). Se apunta con el mando derecho (rayo) o se mueve el cursor con el
+de cada caja detectada (rojo/verde/azul/fucsia/violeta/naranja). Se apunta con el mando derecho (rayo) o se mueve el cursor con el
 joystick izquierdo (--puntero joystick, alternativa que no depende de la pose del mando). La caja bajo el
 cursor se resalta; el GATILLO DERECHO la elige y el robot va hacia ella (igual que pulsar su color).
 Rayo: antes de usarlo, apuntar a la cruz del centro y CALIBRAR: gatillo derecho (la primera vez), o los dos
@@ -69,13 +70,13 @@ class Mapper:
     """Convierte el estado de los mandos en teclas del programa de cajas.
 
     s: dict con rA, rB, lX, lY, rTrig, lTrig, rStick, lStick, gripL, gripR (bool).
-    punto: caja bajo el puntero (1/2/3) o None; cal: el puntero esta calibrado (o no hace falta).
+    punto: caja bajo el puntero (1/2/3/5/6/7) o None; cal: el puntero esta calibrado (o no hace falta).
     update() devuelve una lista de (tecla, etiqueta). Actua por flanco de subida.
     La tecla especial "CAL" pide calibrar el puntero (no se envia al panel); "PT" = ir al punto del video al que
     se apunta (el programa lo calcula con xy, que es ese punto normalizado 0..1 o None si no apunta al video).
     """
     KEYS = (("rA", "1", "ROJO"), ("rB", "2", "VERDE"), ("lX", "3", "AZUL"))
-    NOMBRES = {1: "ROJO", 2: "VERDE", 3: "AZUL"}
+    NOMBRES = {1: "ROJO", 2: "VERDE", 3: "AZUL", 5: "FUCSIA", 6: "VIOLETA", 7: "NARANJA"}
     HOLD = 1.0  # s: un clic de joystick mantenido este tiempo calibra el puntero
 
     def __init__(self, seguro="habilitar", avanzar_cada=1.0, puntero=True):
@@ -144,7 +145,7 @@ class Mapper:
                 out.append(("s", "INSPECCIONAR"))
             elif not cal:  # primera vez: el gatillo derecho calibra (apuntando a la cruz del centro)
                 out.append(("CAL", "CALIBRAR puntero (gatillo)"))
-            elif punto not in (1, 2, 3):  # no hay caja bajo el cursor: ir al punto del piso al que apuntas
+            elif punto not in self.NOMBRES:  # no hay caja bajo el cursor: ir al punto del piso al que apuntas
                 if xy is None:
                     self.bloqueo = "Apunta al video y aprieta el gatillo"
                 elif ok:
@@ -277,7 +278,7 @@ def letterbox_rect(ih, iw, h, w):
 
 
 def caja_bajo(cajas, uv, src_hw, h, w, margen=0.03):
-    """Caja (1/2/3) bajo el pixel `uv` del cuadro h x w. `cajas`: {"1": [x0,y0,x1,y1]} normalizadas al video.
+    """Caja (1/2/3/5/6/7) bajo el pixel `uv` del cuadro h x w. `cajas`: {"1": [x0,y0,x1,y1]} normalizadas al video.
     Devuelve (id, (x0,y0,x1,y1) en pixeles del cuadro) o (None, None). Con varias, la de menor area."""
     if uv is None or not cajas or src_hw is None:
         return None, None
@@ -393,14 +394,15 @@ def compose(frame, age, h, w, seguro_txt, ultimo, bloqueo, seguro_on, src, cajas
         # cajas seleccionables (el programa de cajas las detecta): recuadro fino; la apuntada, gruesa
         if cajas:
             x0, y0, nw, nh = letterbox_rect(frame.shape[0], frame.shape[1], h, w)
-            cols = {"1": (60, 60, 255), "2": (60, 220, 60), "3": (255, 140, 50)}
+            cols = {"1": (60, 60, 255), "2": (60, 220, 60), "3": (255, 140, 50),
+                    "5": (200, 60, 240), "6": (230, 60, 150), "7": (30, 140, 255)}
             for k, (bx0, by0, bx1, by1) in cajas.items():
                 p0 = (int(x0 + bx0 * nw), int(y0 + by0 * nh))
                 p1 = (int(x0 + bx1 * nw), int(y0 + by1 * nh))
                 es_sel = sel is not None and int(k) == sel[0]
                 cv2.rectangle(img, p0, p1, cols[k], 4 if es_sel else 1)
                 if es_sel:
-                    cv2.putText(img, {"1": "ROJO", "2": "VERDE", "3": "AZUL"}[k] + " - gatillo derecho para ir",
+                    cv2.putText(img, Mapper.NOMBRES[int(k)] + " - gatillo derecho para ir",
                                 (p0[0], max(18, p0[1] - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, cols[k], 2, cv2.LINE_AA)
     # cursor del puntero
     if uv is not None and ok_img:
@@ -452,7 +454,7 @@ class StatusPoller(threading.Thread):
             try:
                 with urllib.request.urlopen(self.url, timeout=0.6) as r:
                     d = json.loads(r.read() or b"{}")
-                self.cajas = {k: v for k, v in (d.get("cajas") or {}).items() if k in ("1", "2", "3")}
+                self.cajas = {k: v for k, v in (d.get("cajas") or {}).items() if k in ("1", "2", "3", "5", "6", "7")}
                 self.t = time.time()
             except Exception:  # noqa: BLE001
                 self.cajas = {}

@@ -4,6 +4,7 @@
 Convierte frases en las mismas teclas de deploy_sonic_vision.py:
 
     "zuu, busca el rojo"      -> 1        "zuu, ve al verde"  -> 2      "zuu, azul" -> 3
+    "zuu, fucsia"             -> 5        "zuu, violeta"      -> 6      "zuu, naranja" -> 7
     "zuu, inspecciona"        -> s        "zuu, quieto"       -> 0
     "para" / "alto" / "detente" -> ESPACIO (PARAR; NO necesita la palabra de activacion)
 
@@ -40,7 +41,10 @@ STOP_WORDS = {"para", "parar", "alto", "detente", "detener", "detenerse", "frena
               "stop", "espera", "pausa", "basta"}
 QUIET_WORDS = {"quieto", "quieta", "cero"}
 SCAN_WORDS = {"inspecciona", "inspeccionar", "inspeccion", "gira", "girar", "explora", "explorar", "busca", "buscar"}
-COLOR_WORDS = {"rojo": "1", "roja": "1", "verde": "2", "azul": "3"}
+COLOR_WORDS = {"rojo": "1", "roja": "1", "verde": "2", "azul": "3",
+               "fucsia": "5", "fuxia": "5", "fuchsia": "5", "magenta": "5",
+               "violeta": "6", "morado": "6", "morada": "6", "purpura": "6",
+               "naranja": "7", "naranjado": "7", "anaranjado": "7"}
 # Google puede transcribir "zuu" de varias formas; se aceptan las parecidas
 WAKE_VARIANTS = {"zuu", "zuuu", "zu", "zuh", "suu", "su", "zoo", "zus"}
 
@@ -52,7 +56,7 @@ def normalizar(texto):
 
 
 def interpretar(texto, palabra_activacion="zuu"):
-    """Devuelve (tecla, motivo). tecla es ' ', '0', 's', '1', '2', '3' o None.
+    """Devuelve (tecla, motivo). tecla es ' ', '0', 's', '1', '2', '3', '5', '6', '7' o None.
     PARAR siempre funciona. El resto exige la palabra de activacion (si se configuro)."""
     w = normalizar(texto)
     if not w:

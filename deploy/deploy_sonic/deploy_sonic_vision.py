@@ -10,16 +10,17 @@ GR00T-WholeBodyControl. Funciona en dos modos:
   ROBOT REAL  (--source g1 --real)
     teleimager-server (PC2) ──JPEG ZMQ :55555──▶ este programa ──planner :5556──▶ deploy.sh <interfaz>
 
-Este programa hace de "operador": recibe la camara, detecta rojo/verde/azul y publica
+Este programa hace de "operador": recibe la camara, detecta rojo/verde/azul y fucsia/violeta/naranja y publica
 mensajes `planner` (modo, movimiento, facing) con el mismo formato que
 gear_sonic/scripts/pico_manager_thread_server.py. No usa Pico 4.
 
 Teclas (con foco en la ventana "Lo que ve el robot"; no distingue mayusculas):
     s  girar en el sitio inspeccionando        0  quieto (cancela todo)
     1  buscar y caminar a la caja roja         2  verde        3  azul
+    5  fucsia      6  violeta      7  naranja   (colores nuevos; --colores clasicos|nuevos|todos elige cuales estan activos)
     ESPACIO o x  PARAR (IDLE inmediato)        q  salir (deja al robot quieto)
     w  prueba de marcha: camina recto 3 s sin usar la vision (aisla el problema)
-    Voz (--voz g1|pc): "zuu, busca el rojo/verde/azul", "zuu, inspecciona", "zuu, quieto"; "para"/"alto" = PARAR
+    Voz (--voz g1|pc): "zuu, busca el rojo/verde/azul/fucsia/violeta/naranja", "zuu, inspecciona", "zuu, quieto"; "para"/"alto" = PARAR
     Punto: desde los lentes Pico (gatillo derecho sobre el piso) o POST /punto?x=&y= del panel: camina a ese punto del video
     b  reenviar el comando `start` (en --real: pulsar dos veces en 3 s)
 
@@ -30,7 +31,9 @@ Calibracion de colores (sin enviar nada al robot):
     python deploy_sonic_vision.py --source g1 --calibrar
   Clic en la imagen = imprime el HSV del pixel. Rangos propios con --hsv-file (JSON):
     {"red": [[[0,130,70],[10,255,255]], [[170,130,70],[180,255,255]]],
-     "green": [[[40,80,50],[85,255,255]]], "blue": [[[95,110,50],[130,255,255]]]}
+     "green": [[[40,80,50],[85,255,255]]], "blue": [[[95,110,50],[130,255,255]]],
+     "magenta": [[[147,70,70],[169,255,255]]], "violet": [[[131,50,40],[146,255,255]]],
+     "orange": [[[11,170,175],[22,255,255]]]}      (magenta = fucsia, violet = violeta, orange = naranja)
 """
 import argparse
 import base64
@@ -55,7 +58,21 @@ MODE_IDLE = 0
 MODE_SLOW_WALK = 1  # 0.1 - 0.8 m/s
 
 TARGET_STOP, TARGET_SCAN, TARGET_RED, TARGET_GREEN, TARGET_BLUE, TARGET_POINT = -1, 0, 1, 2, 3, 4
-TARGET_NAMES = {-1: "QUIETO", 0: "INSPECCIONANDO", 1: "ROJO", 2: "VERDE", 3: "AZUL", 4: "PUNTO"}
+TARGET_MAGENTA, TARGET_VIOLET, TARGET_ORANGE = 5, 6, 7  # fucsia, violeta, naranja (4 queda para PUNTO)
+TARGET_NAMES = {-1: "QUIETO", 0: "INSPECCIONANDO", 1: "ROJO", 2: "VERDE", 3: "AZUL", 4: "PUNTO",
+                5: "FUCSIA", 6: "VIOLETA", 7: "NARANJA"}
+# Colores que se buscan: --colores clasicos (1,2,3) | nuevos (5,6,7) | todos. Lo fija main().
+COLOR_SETS = {"clasicos": (1, 2, 3), "nuevos": (5, 6, 7), "todos": (1, 2, 3, 5, 6, 7)}
+ACTIVE_TARGETS = COLOR_SETS["todos"]
+
+
+def set_active(nombre):
+    global ACTIVE_TARGETS
+    ACTIVE_TARGETS = COLOR_SETS[nombre]
+
+# Color (BGR) de los recuadros de cada caja en el video / las gafas
+BOX_BGR = {"1": (60, 60, 255), "2": (60, 200, 60), "3": (255, 120, 40),
+           "5": (200, 60, 240), "6": (230, 60, 150), "7": (30, 140, 255)}
 
 REAL_MAX_WALK = 0.3  # m/s, tope en --real mientras no se valide el robot
 
@@ -98,6 +115,10 @@ RGB_RULES = {
     TARGET_RED: lambda r, g, b: (r > 150) & (g < 80) & (b < 80),
     TARGET_GREEN: lambda r, g, b: (g > 150) & (r < 80) & (b < 80),
     TARGET_BLUE: lambda r, g, b: (b > 150) & (r < 80) & (g < 80),
+    # nuevos (cajas de simulacion: fucsia 1 0 .6, violeta .5 0 1, naranja 1 .5 0)
+    TARGET_MAGENTA: lambda r, g, b: (r > 200) & (g < 90) & (b > 100) & (b < 225),
+    TARGET_VIOLET: lambda r, g, b: (r > 90) & (r < 175) & (g < 70) & (b > 200),
+    TARGET_ORANGE: lambda r, g, b: (r > 200) & (g > 90) & (g < 175) & (b < 60),
 }
 
 # Camara real: rangos HSV de OpenCV (H 0-180, S y V 0-255). Punto de partida:
@@ -106,8 +127,14 @@ DEFAULT_HSV = {
     TARGET_RED: [((0, 130, 70), (10, 255, 255)), ((170, 130, 70), (180, 255, 255))],
     TARGET_GREEN: [((40, 80, 50), (85, 255, 255))],
     TARGET_BLUE: [((95, 110, 50), (130, 255, 255))],
+    # Colores nuevos: punto de partida SIN probar con la camara real; calibrar con --calibrar y las cajas del lugar.
+    TARGET_MAGENTA: [((147, 70, 70), (169, 255, 255))],   # fucsia
+    TARGET_VIOLET: [((131, 50, 40), (146, 255, 255))],    # violeta / morado
+    TARGET_ORANGE: [((11, 170, 175), (22, 255, 255))],    # naranja vivo (S y V altos para no confundirlo con marron)
 }
-_NAME2T = {"red": TARGET_RED, "green": TARGET_GREEN, "blue": TARGET_BLUE}
+_NAME2T = {"red": TARGET_RED, "green": TARGET_GREEN, "blue": TARGET_BLUE,
+           "magenta": TARGET_MAGENTA, "fucsia": TARGET_MAGENTA, "violet": TARGET_VIOLET, "violeta": TARGET_VIOLET,
+           "orange": TARGET_ORANGE, "naranja": TARGET_ORANGE}
 
 
 def load_hsv_rules(path):
@@ -158,11 +185,11 @@ def mask_stats(mask, min_pixels, largest=False):
 
 def all_boxes(img_rgb, mode, hsv_rules, min_pixels):
     """Caja delimitadora (x0, y0, x1, y1, normalizada 0..1) de cada color visible, para elegirlas con el puntero
-    de los lentes Pico. Devuelve {"1": [...], "2": [...], "3": [...]} (rojo, verde, azul); solo los detectados."""
+    de los lentes Pico. Devuelve {"1": [...], ...} con los colores activos (ACTIVE_TARGETS); solo los detectados."""
     out = {}
     h, w = img_rgb.shape[:2]
     hsv = cv2.cvtColor(np.ascontiguousarray(img_rgb), cv2.COLOR_RGB2HSV) if mode == "hsv" else None
-    for t in (TARGET_RED, TARGET_GREEN, TARGET_BLUE):
+    for t in ACTIVE_TARGETS:
         mask = color_mask(img_rgb, t, mode, hsv_rules, hsv)
         if int(mask.sum()) < min_pixels:
             continue
@@ -618,10 +645,10 @@ class PanelBridge:
 
 
 def calibrate(rx, args, hsv_rules):
-    """Muestra la camara y las mascaras de rojo/verde/azul. No publica nada."""
+    """Muestra la camara y las mascaras de los colores activos. No publica nada."""
     win = "Calibracion (clic = HSV del pixel | p = guardar | q = salir)"
     state = {"pt": None}
-    s = 0.6  # escala de cada panel
+    s = 0.6 if len(ACTIVE_TARGETS) + 1 <= 4 else 0.5  # escala de cada panel (mas chica si hay mas de 3 colores)
 
     def on_mouse(ev, x, y, flags, param):
         if ev == cv2.EVENT_LBUTTONDOWN:
@@ -650,7 +677,7 @@ def calibrate(rx, args, hsv_rules):
                 cv2.circle(base, (int(x * s), int(y * s)), 5, (255, 255, 255), 1)
                 cv2.putText(base, f"HSV {h_},{s_},{v_}", (6, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
         panels = [base]
-        for t in (TARGET_RED, TARGET_GREEN, TARGET_BLUE):
+        for t in ACTIVE_TARGETS:
             mask = color_mask(frame, t, "hsv", hsv_rules, hsv)
             det, m2 = mask_stats(mask, args.min_pixels, largest=True)
             pan = cv2.resize(cv2.cvtColor((m2.astype(np.uint8) * 255), cv2.COLOR_GRAY2BGR), size,
@@ -659,7 +686,10 @@ def calibrate(rx, args, hsv_rules):
                 f"err={det[1]:+.2f} ymax={det[3]:.2f}" if det[0] else "no detectado")
             cv2.putText(pan, txt, (6, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
             panels.append(pan)
-        grid = np.vstack([np.hstack(panels[:2]), np.hstack(panels[2:])])
+        ncol = 2 if len(panels) <= 4 else 4
+        while len(panels) % ncol:
+            panels.append(np.zeros_like(panels[0]))
+        grid = np.vstack([np.hstack(panels[i:i + ncol]) for i in range(0, len(panels), ncol)])
         cv2.imshow(win, grid)
         k = cv2.waitKey(30) & 0xFF
         if k == ord("q"):
@@ -704,7 +734,9 @@ def main():
     p.add_argument("--voz-idioma", default="es-CO")
     p.add_argument("--dry-run", action="store_true",
                    help="calcula todo pero publica siempre IDLE: el robot no se mueve")
-    p.add_argument("--target", type=int, default=TARGET_STOP, choices=(-1, 0, 1, 2, 3), help="objetivo inicial")
+    p.add_argument("--target", type=int, default=TARGET_STOP, choices=(-1, 0, 1, 2, 3, 5, 6, 7), help="objetivo inicial")
+    p.add_argument("--colores", choices=tuple(COLOR_SETS), default="todos",
+                   help="colores que se buscan: clasicos (rojo/verde/azul), nuevos (fucsia/violeta/naranja) o todos")
     # navegacion
     p.add_argument("--scan-ang-vel", type=float, default=None, help="rad/s al inspeccionar (sim 0.5 / real 0.3)")
     p.add_argument("--walk-speed", type=float, default=None, help="m/s (SLOW_WALK 0.1-0.8; sim 0.5 / real 0.2)")
@@ -724,6 +756,7 @@ def main():
     p.add_argument("--turn-tol", type=float, default=0.65, help="solo gira en sitio (IDLE) si |err| supera esto")
     p.add_argument("--lost-hold", type=float, default=0.4, help="s siguiendo recto si se pierde el color")
     args = p.parse_args()
+    set_active(args.colores)
 
     real = args.real
     if real and args.source != "g1":
@@ -807,7 +840,7 @@ def main():
             from voz_cajas import VozListener
             voz = VozListener(args.voz, args.voz_ip, args.voz_idioma, args.voz_activacion, args.voz_umbral,
                                dispositivo=args.voz_dispositivo, puerto_udp=args.voz_puerto).start()
-            print(f"[Voz] activa ({args.voz}). Frases: 'zuu, busca el rojo/verde/azul', 'zuu, inspecciona', "
+            print(f"[Voz] activa ({args.voz}). Frases: 'zuu, busca el rojo/verde/azul/fucsia/violeta/naranja', 'zuu, inspecciona', "
                   f"'zuu, quieto'; 'para'/'alto' = PARAR (sin palabra de activacion).")
         except Exception as e:  # noqa: BLE001
             print(f"[Voz] no disponible ({type(e).__name__}: {e}); sigo solo con teclado. "
@@ -907,7 +940,7 @@ def main():
                 view = draw_overlay(frame, nav, det, label, hz, mask, real, punto=tracker.norm() if nav.target == TARGET_POINT else None)
                 if bridge is not None:
                     for tk, (bx0, by0, bx1, by1) in cajas.items():
-                        col = {"1": (60, 60, 255), "2": (60, 200, 60), "3": (255, 120, 40)}[tk]
+                        col = BOX_BGR[tk]
                         cv2.rectangle(view, (int(bx0 * 640), int(by0 * 480)), (int(bx1 * 640), int(by1 * 480)), col, 1)
             else:
                 view = np.zeros((480, 640, 3), np.uint8)
@@ -958,8 +991,11 @@ def main():
             elif k in (" ", "x"):
                 walk_until = 0.0
                 nav.set_target(TARGET_STOP); nav.reset_state(); print("[PARAR] planner en IDLE")
-            elif k in ("1", "2", "3"):
-                nav.set_target(int(k), force=True); print(f"[Target] {TARGET_NAMES[int(k)]} (reiniciado)")
+            elif k in ("1", "2", "3", "5", "6", "7"):
+                if int(k) in ACTIVE_TARGETS:
+                    nav.set_target(int(k), force=True); print(f"[Target] {TARGET_NAMES[int(k)]} (reiniciado)")
+                else:
+                    print(f"[Target] {TARGET_NAMES[int(k)]} no esta activo (--colores {args.colores}); se ignora la tecla {k}")
             elif k == "b":
                 if real and t0 - last_b > 3.0:
                     last_b = t0

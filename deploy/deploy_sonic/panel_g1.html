@@ -75,6 +75,9 @@ button.on{background:var(--acc);border-color:var(--acc);color:#fff}
       <button class="mv r" onclick="key('1')">🟥 Rojo<kbd>1</kbd></button>
       <button class="mv g" onclick="key('2')">🟩 Verde<kbd>2</kbd></button>
       <button class="mv b" onclick="key('3')">🟦 Azul<kbd>3</kbd></button>
+      <button class="mv" style="border-color:#e0309a" onclick="key('5')">💗 Fucsia<kbd>5</kbd></button>
+      <button class="mv" style="border-color:#8a4fe0" onclick="key('6')">🟪 Violeta<kbd>6</kbd></button>
+      <button class="mv" style="border-color:#f08a1c" onclick="key('7')">🟧 Naranja<kbd>7</kbd></button>
       <button onclick="key('0')">⏸ Quieto<kbd>0</kbd></button>
       <button class="mv" onclick="key('w')">🚶 Prueba marcha 3 s<kbd>W</kbd></button>
       <button onclick="key('b')">↻ Reenviar start<kbd>B</kbd></button>
@@ -91,7 +94,7 @@ button.on{background:var(--acc);border-color:var(--acc);color:#fff}
       <button onclick="proc('voz','start')" title="solo escucha y muestra lo que entiende; no mueve al robot. No lo uses a la vez que el programa de cajas con voz">🧪 Probar voz</button>
       <button onclick="proc('voz','stop')">Parar prueba</button>
     </div>
-    <p style="margin:8px 0 4px;color:var(--mut)">Di «<b id="wake">zuu</b>, busca el rojo / verde / azul», «zuu, inspecciona», «zuu, quieto». «Para» o «alto» = PARAR (no sirve como parada de emergencia).</p>
+    <p style="margin:8px 0 4px;color:var(--mut)">Di «<b id="wake">zuu</b>, busca el rojo / verde / azul / fucsia / violeta / naranja», «zuu, inspecciona», «zuu, quieto». «Para» o «alto» = PARAR (no sirve como parada de emergencia).</p>
     <ul class="phr" id="phr"><li><span>—</span>sin frases todavía</li></ul>
   </div>
 
@@ -117,6 +120,7 @@ button.on{background:var(--acc);border-color:var(--acc);color:#fff}
     <table class="mini"><tr><th>Mando</th><th>Orden</th><th>Mando</th><th>Orden</th></tr>
       <tr><td><b>A</b> (der.)</td><td>🟥 Rojo</td><td><b>X</b> (izq.)</td><td>🟦 Azul</td></tr>
       <tr><td><b>B</b> (der.)</td><td>🟩 Verde</td><td><b>Y</b> (izq.) mantener</td><td>🚶 Avanzar recto (al soltar: PARAR)</td></tr>
+      <tr><td colspan="4">💗 Fucsia, 🟪 Violeta y 🟧 Naranja (teclas 5, 6, 7) no tienen botón en los mandos: se eligen <b>apuntando</b> a la caja y con el gatillo derecho.</td></tr>
       <tr><td><b>Gatillo der.</b></td><td>🎯 Elegir la caja a la que apuntas; si apuntas al piso sin caja, <b>ir a ese punto</b></td><td>Gatillo izq.</td><td><b>PARAR</b> (siempre)</td></tr>
       <tr><td>Clic joystick der.</td><td>🔄 Inspeccionar</td><td>Clic joystick izq.</td><td>⏸ Quieto</td></tr>
       <tr><td>Calibrar el puntero</td><td>Apuntando a la cruz del centro: botón <b>🎯 Calibrar puntero</b> (cuenta atrás 4 s), <b>gatillo derecho</b> (la primera vez), los 2 clics a la vez, o mantener un clic 1 s</td><td>Grip (lateral)</td><td>Seguro: habilita las órdenes de movimiento</td></tr></table>
@@ -183,7 +187,7 @@ function confirmarSI(){if(!$('okSafe').checked){alert('Marca primero la casilla 
 const FIELDS=[['robot_user','Usuario robot'],['robot_pc2','IP PC2 (cámara)'],['robot_pc1','IP PC1'],['pc_ip','IP de esta PC'],['iface','Interfaz de red'],
  ['gr00t','Carpeta GR00T'],['repo_dir','Carpeta del repo'],['hsv_file','Archivo HSV'],['mic_nombre','Micrófono: auto = cualquier USB (o parte del nombre)'],['udp_puerto','Puerto UDP audio'],
  ['stop_y','stop-y (parada)'],['walk_speed','Velocidad de avance m/s'],['max_walk','Tope de velocidad real m/s (máx 0.8)'],['slow_y','y_max donde empieza a frenar'],['slow_speed','Velocidad de acercamiento m/s'],['scan_ang_vel','Giro rad/s'],['voz_activacion','Palabra de activación'],
- ['voz_umbral','Umbral de voz'],['voz_idioma','Idioma voz'],['usar_voz','Programa de cajas con voz (bool)'],['usar_mic','Arranque incluye micrófono (bool)'],['dry_run','Dry-run: no mueve al robot (bool)'],['pico_pc_ip','Pico: IP de esta PC en la red del visor'],['pico_escala','Pico: tamaño del plano del video (puntero)'],['pico_yaw','Pico: ajuste fino del rayo, yaw (°)'],['pico_pitch','Pico: ajuste fino del rayo, pitch (°)'],['pico_env','Pico: entorno conda'],['pico_cal_auto','Pico: calibrar el puntero solo a los N s de conectar (0 = no)'],['depth_far','Profundidad: alcance de la escala (m)'],['depth_port','Puerto de profundidad (robot)'],['sim_depth_port','Puerto de profundidad (simulador)'],['sim_ventana','Ventana de MuJoCo (AnchoxAlto+X+Y, o off)']];
+ ['voz_umbral','Umbral de voz'],['voz_idioma','Idioma voz'],['usar_voz','Programa de cajas con voz (bool)'],['usar_mic','Arranque incluye micrófono (bool)'],['dry_run','Dry-run: no mueve al robot (bool)'],['colores','Colores de búsqueda: clasicos | nuevos | todos'],['pico_pc_ip','Pico: IP de esta PC en la red del visor'],['pico_escala','Pico: tamaño del plano del video (puntero)'],['pico_yaw','Pico: ajuste fino del rayo, yaw (°)'],['pico_pitch','Pico: ajuste fino del rayo, pitch (°)'],['pico_env','Pico: entorno conda'],['pico_cal_auto','Pico: calibrar el puntero solo a los N s de conectar (0 = no)'],['depth_far','Profundidad: alcance de la escala (m)'],['depth_port','Puerto de profundidad (robot)'],['sim_depth_port','Puerto de profundidad (simulador)'],['sim_ventana','Ventana de MuJoCo (AnchoxAlto+X+Y, o off)']];
 function buildForm(){const f=$('form');f.innerHTML='';for(const [k,l] of FIELDS){const v=S.cfg[k];const lab=document.createElement('label');lab.textContent=l;
  let i;if(typeof v==='boolean'){i=document.createElement('input');i.type='checkbox';i.checked=v}else{i=document.createElement('input');i.value=v}
  i.id='f_'+k;lab.appendChild(i);f.appendChild(lab)}cfgBuilt=true}
@@ -256,7 +260,7 @@ function render(){
 }
 document.addEventListener('keydown',e=>{if(/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;const k=e.key.toLowerCase();
  if(k===' '){e.preventDefault();key(' ');return}
- if('s0123wb'.includes(k)&&k.length===1){const mv='s123w'.includes(k);if(mv&&!($('okSafe').checked||!modoReal()))return;key(k)}});
+ if('s0123567wb'.includes(k)&&k.length===1){const mv='s123567w'.includes(k);if(mv&&!($('okSafe').checked||!modoReal()))return;key(k)}});
 async function poll(){
  try{const r=await fetch(`/api/state?log=${logName}&since=${logSince}`);S=await r.json();
   if(!cfgBuilt)buildForm();

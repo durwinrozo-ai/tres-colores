@@ -327,3 +327,26 @@ distancia de parada.
 
 1. ESPACIO (robot quieto) → 2. `q` en la Terminal 3 → 3. Ctrl+C en la Terminal 2 → 4. Ctrl+C en la Terminal A (opcional) → 5. robot sentado o en arnés.
 `fuser 5556/tcp` no debe devolver procesos antes de relanzar (si los hay: `fuser -k 5556/tcp`).
+
+## Colores de busqueda: rojo/verde/azul y fucsia/violeta/naranja
+
+Ademas de rojo (1), verde (2) y azul (3), el programa busca **fucsia (5)**, **violeta (6)** y **naranja (7)**.
+La tecla 4 sigue reservada para el destino "PUNTO" (ir a un punto del piso).
+
+| Color | Tecla | Voz ("zuu, ...") | Gafas Pico | HSV de partida (OpenCV) |
+|---|---|---|---|---|
+| Fucsia | 5 | fucsia, magenta | apuntar a la caja + gatillo derecho | H 147-169, S >= 70, V >= 70 |
+| Violeta | 6 | violeta, morado | apuntar a la caja + gatillo derecho | H 131-146, S >= 50, V >= 40 |
+| Naranja | 7 | naranja | apuntar a la caja + gatillo derecho | H 11-22, S >= 170, V >= 175 |
+
+* `--colores clasicos|nuevos|todos` (por defecto `todos`) elige que colores estan activos: afecta a los recuadros del
+  video y de las gafas, a la calibracion y a las teclas (una tecla de un color inactivo se ignora). En el panel:
+  Ajustes -> "Colores de busqueda" (`colores` en `panel_config.json`). Para un lugar con objetos rojos/verdes/azules:
+  `--colores nuevos`.
+* Los rangos nuevos **no estan probados con la camara real**. Calibrar con las cajas y la luz del lugar:
+  `python deploy_sonic_vision.py --source g1 --calibrar --colores nuevos` (clic = HSV del pixel) y guardar los rangos en el
+  JSON de `--hsv-file`; hay un ejemplo en `hsv_colores_nuevos.json` (claves `magenta`, `violet`, `orange`; tambien se
+  aceptan `fucsia`, `violeta`, `naranja`). Si ya tienes `hsv_real.json`, agrega esas claves en el mismo archivo.
+* Naranja: usar un naranja vivo/fosforescente. Un marron claro anaranjado (p. ej. RGB 190,120,60) puede entrar en el rango.
+* Simulador: `escena_cajas.xml.template` agrega tres cajas mas (fucsia, violeta, naranja); sin probar con MuJoCo.
+
